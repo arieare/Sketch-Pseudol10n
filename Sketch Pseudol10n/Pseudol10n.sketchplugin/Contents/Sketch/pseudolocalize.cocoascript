@@ -1,0 +1,292 @@
+var onRun = function(context) {
+  var documentName   = context.document.displayName();
+  var selectedLayers = context.selection;
+  var selectedCount  = selectedLayers.count();
+  //initiate expansion variables for locale
+  var expansion = 0; //initiate expansion rate
+  var expansionTH = -0.15;
+  var expansionVN = 0.35;
+  //call choice panel
+  var options   = ['Thailand (TH)', 'Vietnam (VN)'];
+  var choice    = offerLocale('Pseudolocalize to', options, 0);
+  //show pseudolocalization choice.
+  switch (choice[1]) {
+    case 0: // Thailand
+      // if not cancelled
+      if (choice[0] == "1000"){
+        expansion = expansionTH; //expansion rate for Thailand 15%
+        context.document.showMessage("Pseudolocalize from EN to TH, expansion rate: " + expansion);
+        main("TH");
+      }
+      break;
+    case 1: // Vietnam
+      // if not cancelled
+      if (choice[0] == "1000"){
+        expansion = expansionVN; //expansion rate for Vietnam 35%
+        context.document.showMessage("Pseudolocalize from EN to VN, expansion rate: " + expansion);
+        main("VN");
+      }
+      break;
+    default:
+      log("");
+  }
+  //core function
+  function main(selectedLocale){
+    // check if there is no layer selected
+    if (selectedCount == 0) {
+      log('No layers are selected.');
+      // duplicate page for non-destructive changes
+      duplicatePageForLocale("["+selectedLocale+"]");
+      // proceed with selecting text layers in whole page
+      context.document.showMessage("Pseudolocalize all text in this page")
+      log(context.document.currentPage());
+      log(context.document.currentPage().layers());
+      //creating object for JSON
+      var localeObject = {};
+      // collecting all text layers
+      var layers = context.document.currentPage().children();
+      log(layers);
+      var layersCount = layers.count();
+      for (var i = 0; i < layersCount; i++) {
+        var layer = layers[i];
+        //change string only for unlocked text layer
+        if (layer.isKindOfClass(MSTextLayer) && !layer.isLocked()) {
+          log((i + 1) + '. ' + layer.name() + ': ' + layer.stringValue());
+          log(layer.stringValue().length());
+          var originalText = layer.stringValue();
+          var newtext = textExpand(layer.stringValue(), layer.stringValue().length(), expansion);
+          if(selectedLocale == "TH"){
+            //for thailand remove spaces from string
+            newtext = newtext.replace(/\s+/g, '');
+            //for thailand increase line height
+          }
+          //call pseudolocalization
+          newtext = switchChar(newtext);
+          //add to json object
+          localeObject[originalText] = newtext;
+          //set new value
+          layer.setStringValue(newtext);
+          //locale string from text layers
+          //resize text layer fit its content
+          [layer adjustFrameToFit];
+        }
+      }
+      localeObject = swapJSON(localeObject);
+      var localeJsonString = JSON.stringify(localeObject, undefined, 2);
+      log("JSON file:");
+      log(localeJsonString);
+      //copy to clipboard
+      var clipboard = NSPasteboard.generalPasteboard();
+      clipboard.declareTypes_owner([NSPasteboardTypeString], null);
+      clipboard.setString_forType(localeJsonString , NSPasteboardTypeString);
+      context.document.showMessage('The translation file has been copied to your clipboard');
+    }
+    else {
+      log('Selected layers:');
+      log(selectedLayers);
+      for (var i = 0; i < selectedCount; i++) {
+        var layer = selectedLayers[i];
+        //change string only for unlocked text layer
+        if (layer.isKindOfClass(MSTextLayer) && !layer.isLocked()) {
+          replaceString(layer, selectedLayers, i, selectedLocale);
+        }
+        //if layer is artboard, duplicate all text layers inside it
+        else if (layer.isKindOfClass(MSArtboardGroup)) {
+          log("layer" +i+ "is artboard");
+          var selectedArtboardCount = layer.children().count()
+          var selectedArtboardLayers = layer.children()
+          log(selectedArtboardLayers);
+          for (var j = 0; j < selectedArtboardCount; j++) {
+            var artboardLayer = selectedArtboardLayers[j];
+            if (artboardLayer.isKindOfClass(MSTextLayer) && !artboardLayer.isLocked()) {
+              replaceString(artboardLayer, selectedArtboardLayers, j, selectedLocale);
+            }
+          }
+        }
+      }
+    }
+  }
+  //function to replace text layer with new string
+  function replaceString(textLayer, selectedTextLayer, i, selectedLocale){
+    //hide original text
+    selectedTextLayer[i].setIsVisible(false);
+    //duplicate text layer for non-destructive editing
+    textLayer = selectedTextLayer[i].duplicate();
+    //show duplicate text
+    textLayer.setIsVisible(true);
+    //rename text layer according to its locale
+    textLayer.setName(selectedTextLayer[i].name() + "-["+selectedLocale+"]");
+    var newtext = textExpand(textLayer.stringValue(), textLayer.stringValue().length(), expansion);
+    log("expansion rate: " + expansion);
+    if(selectedLocale == "TH"){
+      //for thailand (0) remove spaces from string
+      newtext = newtext.replace(/\s+/g, '');
+      //for thailand (0) increase text size by 1.2
+    }
+    //call pseudolocalization
+    newtext = switchChar(newtext);
+    //set new value
+    textLayer.setStringValue(newtext);
+    //resize text layer fit its content
+    [textLayer adjustFrameToFit];
+  }
+  //function to expand text by ratio
+  function textExpand(strToExpand, strToExpandLength, expandRatio){
+    var newStrLength = Math.ceil(strToExpandLength + (strToExpandLength * expandRatio));
+    var ratio = newStrLength/strToExpandLength;
+    var newStr;
+    if (ratio < 2) {
+      var difference = newStrLength - strToExpandLength;
+      newStr = strToExpand + strToExpand.substring(0,(difference));
+      return newStr;   
+    }
+    else {
+      var roundedRatio = Math.floor(ratio);
+      var diffRatio = ratio - roundedRatio;
+      diffRatio = strToExpandLength * diffRatio;
+      var expandedSubStr = strToExpand.substring(0,(diffRatio));
+      newStr = repeatStr(strToExpand, roundedRatio);
+      newStr = newStr + expandedSubStr;
+      return newStr;
+    }
+  }
+  //function for showing options for pseudolocalization
+  function offerLocale(msg, items, selectedItemIndex) {
+    selectedItemIndex = selectedItemIndex || 0
+    var accessory = NSComboBox.alloc().initWithFrame(NSMakeRect(0, 0, 200, 25))
+    accessory.addItemsWithObjectValues(items)
+    accessory.selectItemAtIndex(selectedItemIndex)
+    var alert = NSAlert.alloc().init()
+    alert.setMessageText(msg)
+    alert.addButtonWithTitle('Pseudolocalize')
+    alert.addButtonWithTitle('Cancel')
+    alert.setAccessoryView(accessory)
+    var responseCode = alert.runModal()
+    var sel = accessory.indexOfSelectedItem()
+    return [responseCode, sel]
+  }
+  //function for repeating string
+  function repeatStr(pattern, count) {
+    if (count < 1) return '';
+    var result = '';
+    while (count > 1) {
+      if (count & 1) result += pattern;
+      count >>= 1, pattern += pattern;
+    }
+    return result + pattern;
+  }
+  //function duplicate current page
+  function duplicatePageForLocale(localeName) {
+    var doc = context.document
+    var page = doc.currentPage()
+    var newPage = [page copy]
+    newPage.pageDelegate = page.pageDelegate();
+    newPage.setName(page.name() + " " + localeName);   
+    [[doc documentData] addPage:newPage];
+    [doc setCurrentPage:newPage];
+  } 
+  //function to switch diacriticized character
+  function switchChar(strToSwitchChar) { 
+    var prepend = "[";
+    var append = "]";
+    var startdelim = "" || "%"; 
+    var enddelim = "" || "%"; 
+    var re = new RegExp(startdelim + "\\s*[\\w\\.\\s*]+\\s*" + enddelim, "g"); 
+    var m;
+    var tokens = [];
+    var i = 0;
+    var tokenIdx = 0; 
+    var result = "";
+    var c;
+    var pc;
+    var charTable = {
+      A: String.fromCharCode(192, 193, 194, 195, 196, 197, 256, 258, 260, 506, 512, 514),
+      a: String.fromCharCode(224, 225, 226, 227, 228, 229, 257, 259, 261, 507, 513, 515),
+      B: String.fromCharCode(223, 385, 579, 665),
+      b: String.fromCharCode(384, 386, 387, 388, 389, 595),
+      C: String.fromCharCode(262, 264, 266, 268),
+      c: String.fromCharCode(263, 265, 267, 269),
+      D: String.fromCharCode(270, 272, 393, 394),
+      d: String.fromCharCode(271, 273),
+      E: String.fromCharCode(274, 276, 278, 280, 282, 516, 518),
+      e: String.fromCharCode(275, 277, 279, 281, 283, 517, 519),
+      F: String.fromCharCode(401),
+      f: String.fromCharCode(402),
+      G: String.fromCharCode(284, 286, 288, 290),
+      g: String.fromCharCode(285, 287, 289, 291),
+      H: String.fromCharCode(292, 294),
+      h: String.fromCharCode(293, 295),
+      I: String.fromCharCode(296, 298, 300, 302, 304),
+      i: String.fromCharCode(297, 299, 301, 303, 305),
+      J: String.fromCharCode(309),
+      j: String.fromCharCode(308),
+      K: String.fromCharCode(310, 408),
+      k: String.fromCharCode(311, 312, 409),
+      L: String.fromCharCode(313, 315, 317, 319, 321),
+      l: String.fromCharCode(314, 316, 318, 320, 322),
+      N: String.fromCharCode(323, 325, 327, 330, 413),
+      n: String.fromCharCode(324, 326, 328, 329, 331, 414),
+      O: String.fromCharCode(332, 334, 336, 416),
+      o: String.fromCharCode(333, 335, 337, 417),
+      P: String.fromCharCode(420),
+      p: String.fromCharCode(421, 447),
+      Q: String.fromCharCode(490, 492),
+      q: String.fromCharCode(491, 493, 587),
+      R: String.fromCharCode(340, 342, 344, 422),
+      r: String.fromCharCode(341, 343, 345),
+      S: String.fromCharCode(346, 348, 350, 352),
+      s: String.fromCharCode(347, 349, 351, 353),
+      T: String.fromCharCode(354, 356, 358),
+      t: String.fromCharCode(355, 357, 359),
+      U: String.fromCharCode(360, 362, 364, 366, 368, 370),
+      u: String.fromCharCode(361, 363, 365, 367, 369, 371),
+      W: String.fromCharCode(372),
+      w: String.fromCharCode(373),
+      Y: String.fromCharCode(374, 376, 435, 562, 590),
+      y: String.fromCharCode(375, 436, 563, 591),
+      Z: String.fromCharCode(377, 379, 381, 437),
+      z: String.fromCharCode(378, 380, 382, 438)
+    };    
+    while (m = re.exec(strToSwitchChar)) {
+      tokens.push(m);
+    }
+    var token = tokens[tokenIdx++] || {
+      index: -1
+    };
+    while (i < strToSwitchChar.length) {
+      if (token.index === i) {
+        result += token[0];
+        i += token[0].length;
+        token = tokens[tokenIdx++] || {
+          index: -1
+        };
+        continue;
+      }
+
+      c = strToSwitchChar[i];
+      pc = charTable[c];
+
+      if (pc) {
+        var diacriticalIndex = strToSwitchChar.length % pc.length;
+        c = pc[diacriticalIndex];
+      }
+      result += c;
+      i++;
+    }
+    return prepend + result + append;
+  }
+  //swap JSON keystring
+  function swapJSON(input) {
+    var one, output = {};
+    for (one in input) {
+      if (input.hasOwnProperty(one)) {
+        var looper = input[one];
+        output[looper] = one;
+      }
+    }
+    return output;
+  }
+  //refresh view
+  var view = context.document.currentView()
+  view.refresh;
+};

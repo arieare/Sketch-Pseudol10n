@@ -1,0 +1,27 @@
+{
+    "author": "arieare",
+    "commands": [{
+        "name": "Pseudolocalize to...",
+        "identifier": "pseudolocalize",
+        "shortcut": "",
+        "script": "pseudolocalize.cocoascript",
+        "handler": "onRun"
+    }, {
+        "name": "Localize with...",
+        "identifier": "localize",
+        "shortcut": "",
+        "script": "localize.cocoascript",
+        "handler": "onRun"
+    }],
+    "menu": {
+        "items": [
+            "pseudolocalize",
+            "localize"
+        ]
+    },
+    "identifier": "com.example.sketch.73daae51-da41-4430-8cd5-231d7fa11246",
+    "version": "beta",
+    "description": "plugins to pseudolocalize your text layers",
+    "authorEmail": "arie.a.re@gmail.com",
+    "name": "Pseudol10n"
+}

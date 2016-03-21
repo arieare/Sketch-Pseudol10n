@@ -1,0 +1,71 @@
+var onRun = function(context) {
+  var doc = context.document;  
+  localizePage(doc.currentPage());
+  //loop through text page
+  function getTextLayers(page) {
+    var layers = [page children],
+    textLayers = [];
+    for (var i = 0; i < layers.count(); i++) {
+      var layer = [layers objectAtIndex:i];
+      if (layer.isKindOfClass(MSTextLayer)) {
+        textLayers.push(layer);
+      }
+    }
+    return textLayers;
+  }
+  //replace text with json file
+  function replaceWithJsonString(page, language, data) {
+    var errorCount = 0;
+    var textLayers = getTextLayers(page);
+    for (var i = 0; i < textLayers.length; i++) {
+      var textLayer = textLayers[i],
+      stringValue = unescape(textLayer.stringValue());
+      if(data[stringValue]){
+        textLayer.setStringValue(data[stringValue]);
+        [textLayer adjustFrameToFit];
+      }
+      else {
+        errorCount++;
+      }
+    }
+    return errorCount;
+  }
+  //localize page with json file
+  function localizePage(page) {
+    var openPanel = [NSOpenPanel openPanel];
+    var defaultDirectory = [NSURL fileURLWithPath: "~/Desktop/"];
+    if ([doc fileURL]) {
+      defaultDirectory = [[doc fileURL] URLByDeletingLastPathComponent]
+    }
+    [openPanel setCanChooseDirectories: true];
+    [openPanel setCanChooseFiles: true];
+    [openPanel setAllowedFileTypes: ['json']];
+    [openPanel setCanCreateDirectories: false];
+    [openPanel setDirectoryURL: defaultDirectory];
+    [openPanel setAllowsMultipleSelection: true]
+    [openPanel setTitle: "Pick a json file"];
+    [openPanel setPrompt: "Localize"];
+    if ([openPanel runModal] == NSOKButton) {
+      var urls = [openPanel URLs];
+      var errorCount = 0;
+      var url, filename, getString;
+      for (var i = 0; i < urls.count(); i++) {
+        url = urls[i];
+        filename = [[url lastPathComponent] stringByDeletingPathExtension];
+        getString = NSString.stringWithContentsOfFile_encoding_error(url, NSUTF8StringEncoding, null);
+        //parse json and apply to the text
+        if (getString) {
+          data = JSON.parse(getString.toString());
+          errorCount += replaceWithJsonString(page, filename, data);
+        }
+      }
+      if (errorCount > 0) {
+        context.document.showMessage('Localization completed with ' + errorCount + ' errors.');
+      }
+      else {
+        context.document.showMessage('Localization completed successfully');
+      }
+    }
+    return true;
+  }
+};
