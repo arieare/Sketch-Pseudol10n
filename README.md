@@ -11,9 +11,10 @@ Notice that pseudolocalized text is still readable, so you won't lose context wh
 `add image of example here`
 
 ## Installation
-1. Download the repository from this [link](#!).
+1. Download the repository from this [link](https://github.com/arieare/Sketch-Pseudol10n/archive/master.zip).
 2. Grab the `Pseudol10n` folder from the ZIP.
 3. Double click the plugin to install in your sketch.
+
 
 ## Usage
 ### A. Pseudolocalize selected text layers
@@ -21,6 +22,8 @@ Notice that pseudolocalized text is still readable, so you won't lose context wh
 2. Select a text layer, or group of layers.
 3. Pseudolocalize to your target language.
 4. Your pseudolocalized text layers will be suffixed with `[target language]` (for example `[TH]` for Thailand) and the original text layers will be hidden.
+
+![alt text](img/1-psdlc-selected-text.gif "Pseudolocalize selected text layers")
 
 ### B. Pseudolocalize all text in artboards
 1. Make sure your text copy are in English (EN).
