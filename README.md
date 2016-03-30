@@ -23,7 +23,7 @@ Notice that pseudolocalized text is still readable, so you won't lose context wh
 3. Pseudolocalize to your target language.
 4. Your pseudolocalized text layers will be suffixed with `[target language]` (for example `[TH]` for Thailand) and the original text layers will be hidden.
 
-![alt text](img/1-psdlc-selected-text.gif "Pseudolocalize selected text layers")
+![alt text](https://www.dropbox.com/s/ucizubcm8ordtnp/1-psdlc-selected-text.gif?dl=0 "Pseudolocalize selected text layers")
 
 ### B. Pseudolocalize all text in artboards
 1. Make sure your text copy are in English (EN).
