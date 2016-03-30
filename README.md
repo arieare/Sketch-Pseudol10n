@@ -41,10 +41,10 @@ Notice that pseudolocalized text is still readable, so you won't lose context wh
 7. Open up your favorite text editor (such as Sublime) and paste the `json`.
 8. Save it as `json` file, and give it to your content editor to be translated.
 
-### D. Pseudolocalize page
+### D. Localize page
 1. Go to page that you wish to be localized.
 2. Localize from a `json` file.
-3. Pick `json` file that you already translated on `C`.
+3. Pick `json` file that you already translated.
 
 ### E. Exclude text layers
 1. A lot of time you'll find some text doesn't need to be localized (for example, numbers!)
